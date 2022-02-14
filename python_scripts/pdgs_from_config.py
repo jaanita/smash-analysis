@@ -123,9 +123,10 @@ inv_dict = {}  # inverse dictionary for particle-name mapping
 pdg_dict_gen = {}  # dictionary for generic particle-name mapping
 
 
-def pdg_to_name_init(configfile):
+def pdg_to_name_init(configfile):    
     for line in open(configfile, 'r'):
-        if line.startswith("particles: "):  # find particles section
+        if line.startswith("            Particles: "):  # find particles section
+            print(line)
             line = line[line.find('"') + 1:line.rfind('"')]  # extract data
             for pline in line.split("\\n"):  # loop over particles
                 pline = pline.strip()
@@ -135,16 +136,23 @@ def pdg_to_name_init(configfile):
                     if pline.find('#') >= 0:
                         pline = pline[:pline.find('#')]
                     array = pline.split()
+                    print(array[1][1:-1])
                     # get name string
                     name = str(array[0])
                     # For SMASH < 1.4, the third column is the first PDG code.
                     # For SMASH >= 1.4, it is the parity, and the codes start
                     # at the fourth column.
-                    if array[3] in ('+', '-'):
+                    if array[1] in ('+', '-'):
                         first_pdg_code = 4
                     else:
-                        first_pdg_code = 3
+                        first_pdg_code = 1
+                    bl = 0
                     for i in array[first_pdg_code:]:  # loop over PDG codes
+                        if (bl == 0):
+                            i = i[1:-1]
+                            bl = 1
+                        else:
+                            i = i[0:-1]
                         p = PDG_code(int(i, 16))
                         # Take care of nuclei
                         if is_string_nuclear_pdg(i):
@@ -172,6 +180,7 @@ def pdg_to_name_init(configfile):
                             pdg_dict[-int(i)] = antiname(full_name,p)
                             pdg_dict_gen[-int(i)] = antiname(gname,p)
     if len(pdg_dict) == 0 or len(pdg_dict_gen) == 0:
+        print("hey")
         raise ValueError('Could not read particles from "{}"'.format(configfile))
 
     # For nucleons, we use the historic symbols.

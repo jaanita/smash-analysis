@@ -38,6 +38,8 @@ def store_results(results_file, results_list, version, quantity):
         title_line += '\t'.join(str(e) for e in results_list[0])
 
         store_file.write(title_line + '\n')
+        print("hey")
+        print(results_list)
         for energy in range(0,len(results_list[1][0])):
             result_line = str(results_list[1][0][energy])
             for pdg in range(0,len(results_list[0])):

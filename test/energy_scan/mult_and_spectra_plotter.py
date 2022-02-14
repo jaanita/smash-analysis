@@ -443,7 +443,7 @@ def plotting(data1, data2, config_file, smash_code_version, output_folder):
         filename_pp = quantity + '_' + 'pp' + '.txt'
 
         store_results(output_folder + '/' + filename_AuAuPbPb, collected_results_AuAuPbPb, smash_code_version, quantity)
-        store_results(output_folder + '/' + filename_pp, collected_results_pp, smash_code_version, quantity)
+        #store_results(output_folder + '/' + filename_pp, collected_results_pp, smash_code_version, quantity)
 
     # Plotting spectra, only those, where some data is present
     for quantity in quantities:
@@ -587,7 +587,7 @@ def plotting(data1, data2, config_file, smash_code_version, output_folder):
             filename_pp = quantity + '_pp_' + str(pdg) + '.txt'
 
             store_results(output_folder + '/' + filename_AuAuPbPb, collected_results_AuAuPbPb, smash_code_version, quantity)
-            store_results(output_folder + '/' + filename_pp, collected_results_pp, smash_code_version, quantity)
+            #store_results(output_folder + '/' + filename_pp, collected_results_pp, smash_code_version, quantity)
 
 
 

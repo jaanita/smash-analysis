@@ -15,6 +15,8 @@ import smash_basic_scripts as sb
 exec(compile(open(os.path.dirname(os.path.abspath(__file__))+'/../../python_scripts/common_plotting.py', "rb").read(), os.path.dirname(os.path.abspath(__file__))+'/../../python_scripts/common_plotting.py', 'exec'))
 import comp_to_prev_version as cpv
 
+print(matplotlib.__version__)
+
 colours = ["darkred","deepskyblue","deeppink","limegreen","orange","red", "magenta", "chartreuse", "cyan", "darkmagenta", "yellow"]# , "lavender", "navajowhite", "midnightblue", "yellow", "blue", "gold", "darkgreen"]
 
 def fullsplit_path(the_path):
@@ -39,7 +41,7 @@ def store_results(results_file, results_list, version, quantity):
 
         store_file.write(title_line + '\n')
         print("hey")
-        print(results_list)
+        print(len(results_list[1][0]))
         for energy in range(0,len(results_list[1][0])):
             result_line = str(results_list[1][0][energy])
             for pdg in range(0,len(results_list[0])):
@@ -417,7 +419,7 @@ def plotting(data1, data2, config_file, smash_code_version, output_folder):
                     print('No positive values encountered in ' + str(quantity) + ' for ' + str(pdg) +\
                           '. Cannot log-scale the y axis, scale will be linear.')
                 else:
-                     plt.yscale('log', nonposy='clip')
+                     plt.yscale('log', nonpositive='clip')
             hadron_name = sb.pdg_to_name(pdg_abs, config_file)
             antihadron_name = sb.pdg_to_name(-pdg_abs, config_file)
             plot_title = hadron_name
@@ -560,7 +562,7 @@ def plotting(data1, data2, config_file, smash_code_version, output_folder):
                             print('No positive values encountered in ' + str(quantity) + ' for ' + str(pdg) +\
                                   '. Cannot log-scale the y axis, scale will be linear.')
                         else:
-                             plt.yscale('log', nonposy='clip')
+                             plt.yscale('log', nonpositive='clip')
                         if (quantity == 'mtspectra'):
                             plt.xlabel('$m_{T} - m_{0}$ [GeV]')
                         else:

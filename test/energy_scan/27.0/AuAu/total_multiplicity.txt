@@ -1,0 +1,4 @@
+# smash and analysis version: SMASH-1.8.1 SMASH-2.1ana-3-gd3ffefe
+# total number events: 10
+# pdg list: 211 -211 111 321 -321 2212 -2212 3122 -3122 1000010020 -1000010020 3312 -3312 3334 -3334 3212 -3212
+      41       41       33        8       10        1        4        0        1        0        0        0        0        0        0        0        0 

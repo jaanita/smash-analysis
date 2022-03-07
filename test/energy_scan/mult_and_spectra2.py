@@ -170,19 +170,98 @@ class BulkObservables:
 
     def save(self, files_to_write):
         """ Saves bulk observables to text files. """
-        midrapidity_yield_file = files_to_write
+        yspectra_file, mtspectra_file, ptspectra_file, v2_file, meanmt0_midrapidity_file,\
+        meanpt_midrapidity_file, midrapidity_yield_file, total_multiplicity_file = files_to_write
+        ybin_centers = BulkObservables.bin_centers(self.ybins)
+        with open(yspectra_file, 'w') as f:
+            self.write_header(f)
+            f.write('# y bin edges: %s\n' % np.array_str(self.ybins, max_line_width = 1000000))
+            f.write('# y bin center, number of pdg in bin (pdglist)\n')
+            for bin_number in range(ybin_centers.size):
+                f.write(' %6.3f' % ybin_centers[bin_number])
+                for i in range(self.npdg):
+                     f.write(' %8i' % self.yhist[i, bin_number])
+                f.write('\n')
+        mtbin_centers = BulkObservables.bin_centers(self.mtbins)
+        with open(mtspectra_file, 'w') as f:
+            self.write_header(f)
+            f.write('# mt bin edges: %s\n' % np.array_str(self.mtbins, max_line_width = 1000000))
+            f.write('# mt[GeV] bin center, number of pdg in bin (pdglist)\n')
+            for bin_number in range(mtbin_centers.size):
+                f.write(' %6.3f' % mtbin_centers[bin_number])
+                for i in range(self.npdg):
+                    f.write(' %8i' % self.mthist[i, bin_number])
+                f.write('\n')
+        ptbin_centers = BulkObservables.bin_centers(self.ptbins)
+        with open(ptspectra_file, 'w') as f:
+            self.write_header(f)
+            f.write('# pt bin edges: %s\n' % np.array_str(self.ptbins, max_line_width = 1000000))
+            f.write('# pt[GeV] bin center, number of pdg in bin (pdglist)\n')
+            for bin_number in range(ptbin_centers.size):
+                f.write(' %6.3f' % ptbin_centers[bin_number])
+                for i in range(self.npdg):
+                    f.write(' %8i' % self.pthist_midrapidity[i, bin_number])
+                f.write('\n')
+        with open(v2_file, 'w') as f:
+             self.write_header(f)
+             f.write('# pt bin edges: %s\n' % np.array_str(self.ptbins, max_line_width = 1000000))
+             f.write('# pt[GeV] bin center, v2 of pdg in bin (pdglist)\n')
+             for bin_number in range(ptbin_centers.size):
+                 f.write(' %6.3f' % ptbin_centers[bin_number])
+                 for i in range(self.npdg):
+                     # For each pT, sum of cos2phi over particles has to be divided by number of particles at this pT
+                     v2 = np.where(self.pthist_midrapidity[i, bin_number] > 0,
+                                   self.v2[i, bin_number] / self.pthist_midrapidity[i, bin_number], 0.0)
+                     f.write(' %15.10f' % v2)
+                 f.write('\n')
 
-        for i in [midrapidity_yield_file]:
+        for i in [meanmt0_midrapidity_file, meanpt_midrapidity_file,
+                  midrapidity_yield_file, total_multiplicity_file]:
             with open(i, 'w') as f: self.write_header(f)
+        with open(meanmt0_midrapidity_file, 'a') as f:
+            np.savetxt(f, self.meanmt0_midrapidity, fmt = '%8.5f', newline = ' ')
+        with open(meanpt_midrapidity_file, 'a') as f:
+            np.savetxt(f, self.meanpt_midrapidity, fmt = '%8.5f', newline = ' ')
         with open(midrapidity_yield_file, 'a') as f:
             np.savetxt(f, self.midrapidity_yield, fmt = '%8i', newline = ' ')
+        with open(total_multiplicity_file, 'a') as f:
+            np.savetxt(f, self.total_multiplicity, fmt = '%8i', newline = ' ')
 
     @staticmethod
     def read(files_to_read):
         """ Reads bulk observables, that were saved totext files by the save method. """
-        midrapidity_yield_file = files_to_read
+        yspectra_file, mtspectra_file, ptspectra_file, v2_file, meanmt0_midrapidity_file,\
+        meanpt_midrapidity_file, midrapidity_yield_file, total_multiplicity_file = files_to_read
         spectra = BulkObservables()
-        spectra.midrapidity_yield = np.loadtxt(midrapidity_yield_file) #turn txt to array
+        with open(yspectra_file, 'r') as f:
+            smash_version, analysis_version = f.readline().split(':')[1].split()
+            spectra.smash_version = smash_version
+            spectra.nevents = int(f.readline().split(':')[1])
+            spectra.pdglist = [int(x) for x in f.readline().split(':')[1].split()]
+            spectra.npdg = len(spectra.pdglist)
+            ybinning = f.readline().split('[')[1].split(']')[0].split()
+            spectra.ybins = np.array([float(x) for x in ybinning])
+            spectra.yhist = np.loadtxt(yspectra_file)[:,1:].T
+        with open(mtspectra_file, 'r') as f:
+            for _ in range(3): f.readline()
+            mtbinning = f.readline().split('[')[1].split(']')[0].split()
+            spectra.mtbins = np.array([float(x) for x in mtbinning])
+            spectra.mthist = np.loadtxt(mtspectra_file)[:,1:].T
+        with open(ptspectra_file, 'r') as f:
+            for _ in range(3): f.readline()
+            ptbinning = f.readline().split('[')[1].split(']')[0].split()
+            spectra.ptbins = np.array([float(x) for x in ptbinning])
+            spectra.pthist_midrapidity = np.loadtxt(ptspectra_file)[:,1:].T
+        with open(v2_file, 'r') as f:
+            for _ in range(3): f.readline()
+            f.readline()  # pt-binning is already known from pt-spectra file
+            # Multiply back by number of particles at given pT from all events
+            spectra.v2 = np.loadtxt(v2_file)[:,1:].T * spectra.pthist_midrapidity
+
+        spectra.meanmt0_midrapidity = np.loadtxt(meanmt0_midrapidity_file)
+        spectra.meanpt_midrapidity = np.loadtxt(meanpt_midrapidity_file)
+        spectra.midrapidity_yield = np.loadtxt(midrapidity_yield_file)
+        spectra.total_multiplicity = np.loadtxt(total_multiplicity_file)
         return spectra
 
     @staticmethod
@@ -204,12 +283,14 @@ if __name__ == '__main__':
                """)
     parser.add_argument("--output_files", nargs='+', required=True,
         help = """
-               Exactly 1 file names in a fixed order:
-               output_files = midrapidity_yield_file
+               Exactly 8 file names in a fixed order:
+               output_files = (yspectra_file, mtspectra_file, ptspectra_file, v2_file,
+               meanmt0_midrapidity_file,
+               meanpt_midrapidity_file, midrapidity_yield_file, total_multiplicity_file)
                """)
     parser.add_argument("--input_files", nargs='+', required=True,
         help = """
-               With --merge these are 1xN filenames of format 'output_files' to be merged.
+               With --merge these are 8xN filenames of format 'output_files' to be merged.
                Otherwise filename(s) with SMASH binary particles output.
                """)
     parser.add_argument("--parallel", required=False, default=False,
@@ -221,7 +302,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if (args.merge):
-        #assert(len(args.input_files) % 8 == 0)
+        assert(len(args.input_files) % 8 == 0)
         files_to_read_list = list(zip(*(iter(args.input_files),) * 8))
         BulkObservables.merge_basic_spectra(files_to_read_list, args.output_files)
     else:

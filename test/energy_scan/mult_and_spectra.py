@@ -6,7 +6,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../../python_scri
 import smash_basic_scripts as sb
 import argparse
 from multiprocessing import Pool
-
+from scipy.io import savemat
 
 class BulkObservables:
     """
@@ -20,7 +20,7 @@ class BulkObservables:
                        mtbins = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.4, 2.8, 3.2]),
                        ybins = np.linspace(-4.0, 4.0, 41),
                        ptbins = np.array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.4, 2.8, 3.2, 3.6, 4.0, 4.4, 4.8]),
-                       midrapidity_cut = 0.5):
+                       midrapidity_cut = 0.25):
         self.pdglist = pdg_list
         self.npdg = len(pdg_list)
         self.mtbins = mtbins
@@ -170,17 +170,22 @@ class BulkObservables:
 
     def save(self, files_to_write):
         """ Saves bulk observables to text files. """
-        midrapidity_yield_file = files_to_write
-
-        for i in [midrapidity_yield_file]:
-            with open(i, 'w') as f: self.write_header(f)
-        with open(midrapidity_yield_file, 'a') as f:
+        midrapidity_yield_file = files_to_write #name of saving file, still the same will be 100 mat files 
+        #mymat={'self.midrapidity_yield':self.midrapidity_yield}
+        #savemat("mymat.mat", mymat)
+        #for i in midrapidity_yield_file:
+        #print(midrapidity_yield_file[0])
+        with open(midrapidity_yield_file[0], 'w') as f: self.write_header(f)
+        with open(midrapidity_yield_file[0], 'a') as f:
             np.savetxt(f, self.midrapidity_yield, fmt = '%8i', newline = ' ')
-
+	
+    def give_rapidity_array(self):
+        return self.midrapidity_yield
+    
     @staticmethod
     def read(files_to_read):
         """ Reads bulk observables, that were saved totext files by the save method. """
-        midrapidity_yield_file = files_to_read
+        midrapidity_yield_file = files_to_read[0]
         spectra = BulkObservables()
         spectra.midrapidity_yield = np.loadtxt(midrapidity_yield_file) #turn txt to array
         return spectra
@@ -225,23 +230,50 @@ if __name__ == '__main__':
         files_to_read_list = list(zip(*(iter(args.input_files),) * 8))
         BulkObservables.merge_basic_spectra(files_to_read_list, args.output_files)
     else:
-        pdg_list = [211,-211,111,321,-321,2212,-2212,3122,-3122,1000010020,-1000010020,3312,-3312,3334,-3334,3212,-3212]
+        pdg_list = [211,-211,321,-321,2212,-2212,3122,-3122,1000010020,-1000010020,3312,-3312,3334,-3334,3212,-3212]
 
         def get_bulk_observables_from_file(input_file):
             b = BulkObservables(pdg_list = pdg_list)
             b.add_from_file(input_file)
             return b
         if (args.parallel):
-           pool = Pool()
-           spectra = get_bulk_observables_from_file(args.input_files[0])
-           spectra_list = pool.map_async(get_bulk_observables_from_file, args.input_files[1:])
-           for i in spectra_list.get():
-               spectra += i
-        else:
-            spectra = BulkObservables(pdg_list = pdg_list)
-            spectra.add_from_files(args.input_files)
-        spectra.save(args.output_files)
+            pool = Pool()
+            spectra = get_bulk_observables_from_file(args.input_files[0])
+            spectra_list = pool.map_async(get_bulk_observables_from_file, args.input_files[1:])
+            for i in spectra_list.get():
+                spectra += i
+        else: #chanigng to accommodate many files and design points # don't do parallel Yet
+            smash_full_array = np.zeros((4,42)) #100 design points, 6 centralities
+            energy = "7.7" #optimize later
+            for design_point in range(4):
+                #smash_point_array = np.zeros(0)
+                for centrality in ["_0_5", "_5_10", "_10_20", "_20_40", "_40_60", "_60_80"]:
+                    directory = "output_"+energy+"/"+str(design_point)+"/"+centrality+"/"+"particles_binary.bin"
+                    print(directory)
+                    print("test")
+                    spectra = BulkObservables(pdg_list = pdg_list)
+                    spectra.add_from_file(directory)
+                    print("test2") 
+                    cent_rapidity = spectra.give_rapidity_array()
+                    sum_charged_hadrons = sum(cent_rapidity)
+                    if centrality=="_0_5":
+                         smash_point_array = cent_rapidity[0:6]
+                         print(smash_point_array)
+                         smash_point_array = np.append(smash_point_array,sum_charged_hadrons)
+                    else:
+                         smash_point_array = np.concatenate((smash_point_array, cent_rapidity[0:7]))
+                         print(smash_point_array)
+                         np.append(smash_point_array,sum_charged_hadrons)
+                
+                smash_full_array[design_point,:]=smash_point_array    
+            #with open(args.output_files[0], 'w') as f: spectra.write_header(f)
+            with open(args.output_files[0], 'w') as f:
+                np.savetxt(f, smash_full_array) #fmt = '%8i', newline = ' ')  
+
+        #spectra.save(args.output_files)
 
         # Read-write consistency check
-        spectra2 = BulkObservables.read(args.output_files)
-        assert(spectra == spectra2)
+        #print(spectra.midrapidity_yield)
+        #spectra2 = BulkObservables.read(args.output_files)
+        #print(spectra2.midrapidity_yield)
+        #all(spectra.midrapidity_yield == spectra2.midrapidity_yield)

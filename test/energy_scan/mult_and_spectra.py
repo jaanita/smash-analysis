@@ -92,17 +92,17 @@ class BulkObservables:
             if (added_total_mult == 0): continue #no particles
             self.yhist[i,:] += np.histogram(y[pdgcut], bins = self.ybins)[0] #fill y bins
 
-            pdg_and_y_cut = np.logical_and(ycut, pdgcut) #both that type pdg and mid-rapidity, array of 1's and 0's 
+            pdg_and_y_cut = np.logical_and(ycut, pdgcut) #both that type pdg and mid-rapidity, array of 1's and 0's
             added_midrap_yield = pdg_and_y_cut.sum() #total number of particles of type pdg and at mid-rapidity
 
-            self.total_multiplicity[i] += added_total_mult 
+            self.total_multiplicity[i] += added_total_mult
             self.midrapidity_yield[i] += added_midrap_yield #important one that I can use to compare STAR
 
             if (added_midrap_yield == 0): continue #no particles in mid-rapidity
-            pt_hist_with_cuts = np.histogram(pT[pdg_and_y_cut], bins = self.ptbins)[0] 
+            pt_hist_with_cuts = np.histogram(pT[pdg_and_y_cut], bins = self.ptbins)[0]
             self.mthist[i,:] += np.histogram(mT0[pdg_and_y_cut], bins = self.mtbins)[0]
             self.pthist_midrapidity[i,:] += np.histogram(pT[pdg_and_y_cut], bins = self.ptbins)[0]
-            a = float(added_midrap_yield) / self.midrapidity_yield[i] 
+            a = float(added_midrap_yield) / self.midrapidity_yield[i]
             self.meanpt_midrapidity[i] = self.updated_mean(self.meanpt_midrapidity[i], pT[pdg_and_y_cut].mean(), a)
             self.meanmt0_midrapidity[i] = self.updated_mean(self.meanmt0_midrapidity[i], mT0[pdg_and_y_cut].mean(), a)
 
@@ -170,7 +170,7 @@ class BulkObservables:
 
     def save(self, files_to_write):
         """ Saves bulk observables to text files. """
-        midrapidity_yield_file = files_to_write #name of saving file, still the same will be 100 mat files 
+        midrapidity_yield_file = files_to_write #name of saving file, still the same will be 100 mat files
         #mymat={'self.midrapidity_yield':self.midrapidity_yield}
         #savemat("mymat.mat", mymat)
         #for i in midrapidity_yield_file:
@@ -178,10 +178,10 @@ class BulkObservables:
         with open(midrapidity_yield_file[0], 'w') as f: self.write_header(f)
         with open(midrapidity_yield_file[0], 'a') as f:
             np.savetxt(f, self.midrapidity_yield, fmt = '%8i', newline = ' ')
-	
+
     def give_rapidity_array(self):
         return self.midrapidity_yield
-    
+
     @staticmethod
     def read(files_to_read):
         """ Reads bulk observables, that were saved totext files by the save method. """
@@ -243,32 +243,31 @@ if __name__ == '__main__':
             for i in spectra_list.get():
                 spectra += i
         else: #chanigng to accommodate many files and design points # don't do parallel Yet
-            smash_full_array = np.zeros((4,42)) #100 design points, 6 centralities
+            smash_full_array = np.zeros((4,42)) #4 design points, 6 centralities, 7 values (6 charged_hadrons, 1 sum_charged_hadrons)
             energy = "7.7" #optimize later
             for design_point in range(4):
                 #smash_point_array = np.zeros(0)
                 for centrality in ["_0_5", "_5_10", "_10_20", "_20_40", "_40_60", "_60_80"]:
                     directory = "output_"+energy+"/"+str(design_point)+"/"+centrality+"/"+"particles_binary.bin"
-                    print(directory)
-                    print("test")
+
                     spectra = BulkObservables(pdg_list = pdg_list)
                     spectra.add_from_file(directory)
-                    print("test2") 
+
                     cent_rapidity = spectra.give_rapidity_array()
                     sum_charged_hadrons = sum(cent_rapidity)
                     if centrality=="_0_5":
                          smash_point_array = cent_rapidity[0:6]
-                         print(smash_point_array)
+                         #print(smash_point_array)
                          smash_point_array = np.append(smash_point_array,sum_charged_hadrons)
                     else:
                          smash_point_array = np.concatenate((smash_point_array, cent_rapidity[0:7]))
-                         print(smash_point_array)
+                         #print(smash_point_array)
                          np.append(smash_point_array,sum_charged_hadrons)
-                
-                smash_full_array[design_point,:]=smash_point_array    
+
+                smash_full_array[design_point,:]=smash_point_array
             #with open(args.output_files[0], 'w') as f: spectra.write_header(f)
             with open(args.output_files[0], 'w') as f:
-                np.savetxt(f, smash_full_array) #fmt = '%8i', newline = ' ')  
+                np.savetxt(f, smash_full_array) #fmt = '%8i', newline = ' ')
 
         #spectra.save(args.output_files)
 

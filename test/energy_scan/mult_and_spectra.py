@@ -7,6 +7,7 @@ import smash_basic_scripts as sb
 import argparse
 from multiprocessing import Pool
 from scipy.io import savemat
+from os.path import exists
 
 class BulkObservables:
     """
@@ -243,26 +244,38 @@ if __name__ == '__main__':
             for i in spectra_list.get():
                 spectra += i
         else: #chanigng to accommodate many files and design points # don't do parallel Yet
-            smash_full_array = np.zeros((4,42)) #4 design points, 6 centralities, 7 values (6 charged_hadrons, 1 sum_charged_hadrons)
+            total_number_design = 4
+            centralities = ["_0_5", "_5_10", "_10_20", "_20_40", "_40_60", "_60_80"]
+            smash_full_array = np.zeros((total_number_design,len(centralities)*7)) #4 design points, 6 centralities, 7 values (6 charged_hadrons, 1 sum_charged_hadrons)
             energy = "7.7" #optimize later
-            for design_point in range(4):
+            for design_point in range(total_number_design):
                 #smash_point_array = np.zeros(0)
-                for centrality in ["_0_5", "_5_10", "_10_20", "_20_40", "_40_60", "_60_80"]:
-                    directory = "output_"+energy+"/"+str(design_point)+"/"+centrality+"/"+"particles_binary.bin"
+                for centrality in centralities:
+                    directory = "../../../JETSCAPE/build/output_"+energy+"/"+str(design_point)+"/"+centrality+"/"+"particles_binary.bin"
 
                     spectra = BulkObservables(pdg_list = pdg_list)
-                    spectra.add_from_file(directory)
+                    file_exists = exists(directory)
+                    if(file_exists):
+                        #print('file exists')
+                        spectra.add_from_file(directory)
+                        cent_rapidity = spectra.give_rapidity_array()
+                        sum_charged_hadrons = sum(cent_rapidity)
 
-                    cent_rapidity = spectra.give_rapidity_array()
-                    sum_charged_hadrons = sum(cent_rapidity)
-                    if centrality=="_0_5":
-                         smash_point_array = cent_rapidity[0:6]
-                         #print(smash_point_array)
-                         smash_point_array = np.append(smash_point_array,sum_charged_hadrons)
                     else:
-                         smash_point_array = np.concatenate((smash_point_array, cent_rapidity[0:7]))
-                         #print(smash_point_array)
-                         np.append(smash_point_array,sum_charged_hadrons)
+                        cent_rapidity = np.zeros(6)
+                        sum_charged_hadrons = 0
+
+                    if centrality==centralities[0]:
+                        smash_point_array = cent_rapidity[0:6]
+
+                        smash_point_array = np.append(smash_point_array,sum_charged_hadrons)
+                        #print(smash_point_array)
+                    else:
+                        smash_point_array = np.concatenate((smash_point_array, cent_rapidity[0:6]))
+
+                        smash_point_array = np.append(smash_point_array,sum_charged_hadrons)
+                        #print(smash_point_array)
+
 
                 smash_full_array[design_point,:]=smash_point_array
             #with open(args.output_files[0], 'w') as f: spectra.write_header(f)
